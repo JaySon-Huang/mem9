@@ -12,17 +12,20 @@ Three components:
 ## Commands
 
 ```bash
-# Build server
-cd server && go build ./cmd/mnemo-server
+# Build server binary (recommended)
+make build
 
-# Run server (requires MNEMO_DSN)
+# Run built binary (requires MNEMO_DSN)
+MNEMO_DSN="user:pass@tcp(host:4000)/mnemos?parseTime=true" make run
+
+# Run server directly with go (alternative)
 cd server && MNEMO_DSN="user:pass@tcp(host:4000)/mnemos?parseTime=true" go run ./cmd/mnemo-server
 
 # Vet / lint
-cd server && go vet ./...
+make vet
 
 # Run all checks
-make build && make vet
+make build && make vet && make test
 ```
 
 ## Project layout
