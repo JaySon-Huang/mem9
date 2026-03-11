@@ -23,6 +23,7 @@ python3 e2e/concurrent-real-doc-test.py
 ## Prerequisites
 
 - Running mnemo-server (`MNEMO_TEST_BASE` defaults to `http://127.0.0.1:18081`)
+- Optional for tenant API smoke on db9: `MNEMO_TEST_TENANT_ID` (skip provision and reuse an existing tenant)
 - `MNEMO_TEST_USER_TOKEN` exported for CRDT/user-space scripts
 - Python 3.8+
 - `jq` for bash scripts

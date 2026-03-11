@@ -20,11 +20,13 @@
 #
 # Usage:
 #   bash e2e/api-smoke-test-round2.sh
-#   MNEMO_BASE=https://api.mem9.ai bash e2e/api-smoke-test-round2.sh
+#   MNEMO_TEST_BASE=http://127.0.0.1:18081 bash e2e/api-smoke-test-round2.sh
+#   MNEMO_TEST_TENANT_ID=<existing-tenant-id> bash e2e/api-smoke-test-round2.sh
 #   POLL_TIMEOUT_S=30 bash e2e/api-smoke-test-round2.sh
 set -euo pipefail
 
-BASE="${MNEMO_BASE:-https://api.mem9.ai}"
+BASE="${MNEMO_TEST_BASE:-${MNEMO_BASE:-http://127.0.0.1:18081}}"
+TEST_TENANT_ID="${MNEMO_TEST_TENANT_ID:-}"
 AGENT_A="smoke-r2-agent"
 SESSION_ID="smoke-r2-$(date +%s)"
 POLL_TIMEOUT_S="${POLL_TIMEOUT_S:-20}"
@@ -91,17 +93,22 @@ echo "========================================================"
 # TEST 1 — Provision fresh tenant
 # ============================================================================
 step "1" "Provision fresh tenant (POST /v1alpha1/mem9s)"
-resp=$(curl_json -X POST "$BASE/v1alpha1/mem9s")
-code=$(http_code "$resp")
-bdy=$(body "$resp")
-check "POST /v1alpha1/mem9s returns 201" "$code" "201"
+if [ -n "$TEST_TENANT_ID" ]; then
+  TENANT_ID="$TEST_TENANT_ID"
+  info "Using existing tenant from MNEMO_TEST_TENANT_ID: $TENANT_ID"
+else
+  resp=$(curl_json -X POST "$BASE/v1alpha1/mem9s")
+  code=$(http_code "$resp")
+  bdy=$(body "$resp")
+  check "POST /v1alpha1/mem9s returns 201" "$code" "201"
 
-TENANT_ID=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || true)
-if [ -z "$TENANT_ID" ]; then
-  fail "Could not extract tenant ID — aborting."
-  exit 1
+  TENANT_ID=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || true)
+  if [ -z "$TENANT_ID" ]; then
+    fail "Could not extract tenant ID — aborting."
+    exit 1
+  fi
+  info "Tenant: $TENANT_ID"
 fi
-info "Tenant: $TENANT_ID"
 
 MEM_BASE="$BASE/v1alpha1/mem9s/$TENANT_ID/memories"
 KNOWN_CONTENT="The mnemos API smoke test round-2 uses a poll loop to wait for async memory creation. The session ID is $SESSION_ID and the server stores memories in TiDB with hybrid vector and keyword search."

@@ -48,3 +48,24 @@ python3 e2e/concurrent-real-doc-test.py
 - Each run creates new keys with a timestamp suffix — safe to run multiple times.
 - All scripts send `X-Mnemo-Agent-Id` header on every request.
 - `crdt-server-merge-e2e.py` is the primary regression test for the section merge feature.
+
+## Tenant API smoke on db9 backend
+
+For `MNEMO_DB_BACKEND=db9`, the most relevant scripts are:
+
+- `e2e/api-smoke-test.sh`
+- `e2e/api-smoke-test-round2.sh`
+
+Both scripts now support using a pre-created tenant ID to avoid relying on
+`POST /v1alpha1/mem9s` provisioning:
+
+```bash
+export MNEMO_TEST_BASE="http://127.0.0.1:18081"
+export MNEMO_TEST_TENANT_ID="your-existing-tenant-id"
+
+bash e2e/api-smoke-test.sh
+bash e2e/api-smoke-test-round2.sh
+```
+
+If `MNEMO_TEST_TENANT_ID` is unset, the scripts keep the old behavior and try
+to provision a fresh tenant.

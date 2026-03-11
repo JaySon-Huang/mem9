@@ -18,10 +18,12 @@
 #
 # Usage:
 #   bash e2e/api-smoke-test.sh
-#   MNEMO_BASE=https://api.mem9.ai bash e2e/api-smoke-test.sh
+#   MNEMO_TEST_BASE=http://127.0.0.1:18081 bash e2e/api-smoke-test.sh
+#   MNEMO_TEST_TENANT_ID=<existing-tenant-id> bash e2e/api-smoke-test.sh
 set -euo pipefail
 
-BASE="${MNEMO_BASE:-https://api.mem9.ai}"
+BASE="${MNEMO_TEST_BASE:-${MNEMO_BASE:-http://127.0.0.1:18081}}"
+TEST_TENANT_ID="${MNEMO_TEST_TENANT_ID:-}"
 AGENT_A="smoke-agent-alpha"
 AGENT_B="smoke-agent-beta"
 SESSION_ID="smoke-session-$(date +%s)"
@@ -96,21 +98,26 @@ check_contains "status=ok in body" "$bdy" '"ok"'
 # TEST 2 — Provision tenant
 # ============================================================================
 step "2" "Provision tenant (POST /v1alpha1/mem9s)"
-resp=$(curl_json -X POST "$BASE/v1alpha1/mem9s")
-code=$(http_code "$resp")
-bdy=$(body "$resp")
-check "POST /v1alpha1/mem9s returns 201" "$code" "201"
+if [ -n "$TEST_TENANT_ID" ]; then
+  TENANT_ID="$TEST_TENANT_ID"
+  info "Using existing tenant from MNEMO_TEST_TENANT_ID: $TENANT_ID"
+else
+  resp=$(curl_json -X POST "$BASE/v1alpha1/mem9s")
+  code=$(http_code "$resp")
+  bdy=$(body "$resp")
+  check "POST /v1alpha1/mem9s returns 201" "$code" "201"
 
-TENANT_ID=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || true)
-if [ -z "$TENANT_ID" ]; then
-  fail "Could not extract tenant ID from response: $bdy"
-  echo "Aborting — cannot continue without a tenant ID."
-  exit 1
+  TENANT_ID=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('id',''))" 2>/dev/null || true)
+  if [ -z "$TENANT_ID" ]; then
+    fail "Could not extract tenant ID from response: $bdy"
+    echo "Aborting — cannot continue without a tenant ID."
+    exit 1
+  fi
+  info "Tenant provisioned: $TENANT_ID"
+
+  CLAIM_URL=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('claim_url',''))" 2>/dev/null || true)
+  [ -n "$CLAIM_URL" ] && info "Claim URL: $CLAIM_URL"
 fi
-info "Tenant provisioned: $TENANT_ID"
-
-CLAIM_URL=$(printf '%s' "$bdy" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('claim_url',''))" 2>/dev/null || true)
-[ -n "$CLAIM_URL" ] && info "Claim URL: $CLAIM_URL"
 
 MEM_BASE="$BASE/v1alpha1/mem9s/$TENANT_ID/memories"
 
